@@ -46,7 +46,7 @@ pacmd set-default-sink virtual_speaker 2>/dev/null || true
 PULSE_SOURCE="virtual_speaker.monitor"
 
 echo "Launching Chromium at ${WEBPAGE_URL}..."
-chromium-browser \
+chromium \
   --no-sandbox \
   --disable-gpu \
   --disable-dev-shm-usage \
