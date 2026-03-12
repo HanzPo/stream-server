@@ -35,6 +35,9 @@ echo "Starting window manager..."
 openbox &
 sleep 1
 
+echo "Hiding cursor..."
+unclutter -idle 0 -root &
+
 echo "Starting PulseAudio..."
 pulseaudio -D --exit-idle-time=-1 2>/dev/null || true
 sleep 1
@@ -53,14 +56,18 @@ chromium-browser \
   --disable-default-apps \
   --disable-translate \
   --js-flags="--max-old-space-size=512" \
-  --start-fullscreen \
-  --kiosk \
   --autoplay-policy=no-user-gesture-required \
   --window-size="${WIDTH},${HEIGHT}" \
   --window-position=0,0 \
   "${WEBPAGE_URL}" &
 BROWSER_PID=$!
-sleep 5
+
+echo "Waiting for Chromium to load..."
+sleep 10
+
+# Force the browser window to fullscreen
+xdotool search --onlyvisible --name "Chromium" windowactivate --sync windowfocus --sync key F11 2>/dev/null || true
+sleep 2
 
 echo "Starting FFmpeg stream to ${STREAM_URL%/*}/****..."
 
