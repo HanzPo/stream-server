@@ -17,8 +17,7 @@ fi
 # Defaults
 RESOLUTION="${RESOLUTION:-1920x1080}"
 FRAMERATE="${FRAMERATE:-30}"
-VIDEO_BITRATE="${VIDEO_BITRATE:-2500k}"
-AUDIO_BITRATE="${AUDIO_BITRATE:-128k}"
+VIDEO_BITRATE="${VIDEO_BITRATE:-4500k}"
 
 WIDTH="${RESOLUTION%x*}"
 HEIGHT="${RESOLUTION#*x}"
@@ -41,22 +40,7 @@ sleep 1
 echo "Hiding cursor..."
 unclutter -idle 0 -root &
 
-echo "Starting PulseAudio..."
-pulseaudio -D --exit-idle-time=-1 2>/dev/null || true
-sleep 1
-pacmd load-module module-null-sink sink_name=virtual_speaker sink_properties=device.description=VirtualSpeaker 2>/dev/null || true
-pacmd set-default-sink virtual_speaker 2>/dev/null || true
-PULSE_SOURCE="virtual_speaker.monitor"
-
 echo "Launching Chromium at ${WEBPAGE_URL}..."
-# Write a custom policy to disable the infobar via Chrome enterprise policies
-mkdir -p /tmp/chromium-policies/managed
-cat > /tmp/chromium-policies/managed/policy.json << 'POLICY'
-{
-  "CommandLineFlagSecurityWarningsEnabled": false
-}
-POLICY
-
 chromium \
   --no-sandbox \
   --disable-gpu \
@@ -65,11 +49,15 @@ chromium \
   --disable-extensions \
   --disable-background-networking \
   --disable-default-apps \
-  --disable-translate \
-  --disable-features=GCMDriver,dbus \
+  --disable-component-update \
+  --disable-breakpad \
+  --disable-features=GCMDriver,dbus,Translate \
+  --no-first-run \
+  --no-default-browser-check \
+  --noerrdialogs \
+  --mute-audio \
   --js-flags="--max-old-space-size=512" \
   --autoplay-policy=no-user-gesture-required \
-  --policy-directory=/tmp/chromium-policies \
   --window-size="${WIDTH},${HEIGHT}" \
   --window-position=0,0 \
   "${WEBPAGE_URL}" &
@@ -87,19 +75,20 @@ echo "Starting FFmpeg stream to ${STREAM_URL%/*}/****..."
 cleanup() {
   echo "Shutting down..."
   kill "$FFMPEG_PID" "$BROWSER_PID" "$XVFB_PID" 2>/dev/null || true
-  pulseaudio --kill 2>/dev/null || true
   exit 0
 }
 trap cleanup SIGTERM SIGINT
 
 ffmpeg \
-  -thread_queue_size 64 \
+  -probesize 10M -analyzeduration 10M \
+  -thread_queue_size 512 \
   -f x11grab -video_size "${RESOLUTION}" -framerate "${FRAMERATE}" -i ":${DISPLAY_NUM}" \
-  -thread_queue_size 64 \
-  -f pulse -i "${PULSE_SOURCE}" \
-  -c:v libx264 -preset ultrafast -tune zerolatency -b:v "${VIDEO_BITRATE}" -maxrate "${VIDEO_BITRATE}" -bufsize "$((${VIDEO_BITRATE%k} * 2))k" \
-  -pix_fmt yuv420p -g "$((FRAMERATE * 2))" \
-  -c:a aac -b:a "${AUDIO_BITRATE}" -ar 44100 \
+  -f lavfi -i anullsrc=r=48000:cl=stereo \
+  -c:v libx264 -preset veryfast -tune zerolatency \
+  -b:v "${VIDEO_BITRATE}" -maxrate "${VIDEO_BITRATE}" -bufsize "$((${VIDEO_BITRATE%k} * 2))k" \
+  -pix_fmt yuv420p -g "$((FRAMERATE * 2))" -keyint_min "$((FRAMERATE * 2))" -sc_threshold 0 \
+  -c:a aac -b:a 128k -ar 48000 \
+  -shortest \
   -f flv "${STREAM_URL}" &
 FFMPEG_PID=$!
 

@@ -4,7 +4,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     ffmpeg \
     xvfb \
-    pulseaudio \
     openbox \
     unclutter \
     xdotool \
