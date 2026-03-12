@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -s /bin/bash streamer && \
-    mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+    mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix && \
+    mkdir -p /etc/chromium/policies/managed && \
+    echo '{"CommandLineFlagSecurityWarningsEnabled": false}' > /etc/chromium/policies/managed/disable-warnings.json
 
 WORKDIR /app
 COPY stream.sh .

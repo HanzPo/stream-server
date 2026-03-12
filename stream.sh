@@ -17,12 +17,15 @@ fi
 # Defaults
 RESOLUTION="${RESOLUTION:-1920x1080}"
 FRAMERATE="${FRAMERATE:-30}"
-VIDEO_BITRATE="${VIDEO_BITRATE:-4500k}"
+VIDEO_BITRATE="${VIDEO_BITRATE:-2500k}"
 AUDIO_BITRATE="${AUDIO_BITRATE:-128k}"
 
 WIDTH="${RESOLUTION%x*}"
 HEIGHT="${RESOLUTION#*x}"
 DISPLAY_NUM=99
+
+# Suppress dbus errors
+export DBUS_SESSION_BUS_ADDRESS=/dev/null
 
 echo "Starting virtual display ${RESOLUTION}..."
 Xvfb ":${DISPLAY_NUM}" -screen 0 "${RESOLUTION}x24" -nocursor &
@@ -46,19 +49,27 @@ pacmd set-default-sink virtual_speaker 2>/dev/null || true
 PULSE_SOURCE="virtual_speaker.monitor"
 
 echo "Launching Chromium at ${WEBPAGE_URL}..."
+# Write a custom policy to disable the infobar via Chrome enterprise policies
+mkdir -p /tmp/chromium-policies/managed
+cat > /tmp/chromium-policies/managed/policy.json << 'POLICY'
+{
+  "CommandLineFlagSecurityWarningsEnabled": false
+}
+POLICY
+
 chromium \
   --no-sandbox \
   --disable-gpu \
   --disable-dev-shm-usage \
-  --disable-infobars \
   --disable-software-rasterizer \
   --disable-extensions \
   --disable-background-networking \
   --disable-default-apps \
   --disable-translate \
-  --disable-features=GCMDriver \
+  --disable-features=GCMDriver,dbus \
   --js-flags="--max-old-space-size=512" \
   --autoplay-policy=no-user-gesture-required \
+  --policy-directory=/tmp/chromium-policies \
   --window-size="${WIDTH},${HEIGHT}" \
   --window-position=0,0 \
   "${WEBPAGE_URL}" &
@@ -82,9 +93,11 @@ cleanup() {
 trap cleanup SIGTERM SIGINT
 
 ffmpeg \
+  -thread_queue_size 64 \
   -f x11grab -video_size "${RESOLUTION}" -framerate "${FRAMERATE}" -i ":${DISPLAY_NUM}" \
+  -thread_queue_size 64 \
   -f pulse -i "${PULSE_SOURCE}" \
-  -c:v libx264 -preset veryfast -tune zerolatency -b:v "${VIDEO_BITRATE}" -maxrate "${VIDEO_BITRATE}" -bufsize "$((${VIDEO_BITRATE%k} * 2))k" \
+  -c:v libx264 -preset ultrafast -tune zerolatency -b:v "${VIDEO_BITRATE}" -maxrate "${VIDEO_BITRATE}" -bufsize "$((${VIDEO_BITRATE%k} * 2))k" \
   -pix_fmt yuv420p -g "$((FRAMERATE * 2))" \
   -c:a aac -b:a "${AUDIO_BITRATE}" -ar 44100 \
   -f flv "${STREAM_URL}" &
