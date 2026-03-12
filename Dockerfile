@@ -12,7 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd -m -s /bin/bash streamer
+
 WORKDIR /app
 COPY stream.sh .
+RUN chown -R streamer:streamer /app
 
+USER streamer
 CMD ["./stream.sh"]

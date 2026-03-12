@@ -47,9 +47,9 @@ PULSE_SOURCE="virtual_speaker.monitor"
 
 echo "Launching Chromium at ${WEBPAGE_URL}..."
 chromium \
-  --no-sandbox \
   --disable-gpu \
   --disable-dev-shm-usage \
+  --disable-infobars \
   --disable-software-rasterizer \
   --disable-extensions \
   --disable-background-networking \
