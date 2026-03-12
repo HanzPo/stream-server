@@ -23,15 +23,11 @@ WIDTH="${RESOLUTION%x*}"
 HEIGHT="${RESOLUTION#*x}"
 DISPLAY_NUM=99
 
-# Extra vertical pixels to account for Chromium's infobar
-INFOBAR_HEIGHT=50
-DISPLAY_HEIGHT=$((HEIGHT + INFOBAR_HEIGHT))
-
 # Suppress dbus errors
 export DBUS_SESSION_BUS_ADDRESS=/dev/null
 
-echo "Starting virtual display ${WIDTH}x${DISPLAY_HEIGHT}..."
-Xvfb ":${DISPLAY_NUM}" -screen 0 "${WIDTH}x${DISPLAY_HEIGHT}x24" -nocursor &
+echo "Starting virtual display ${RESOLUTION}..."
+Xvfb ":${DISPLAY_NUM}" -screen 0 "${RESOLUTION}x24" -nocursor &
 XVFB_PID=$!
 sleep 2
 
@@ -62,7 +58,7 @@ chromium \
   --mute-audio \
   --js-flags="--max-old-space-size=512" \
   --autoplay-policy=no-user-gesture-required \
-  --window-size="${WIDTH},${DISPLAY_HEIGHT}" \
+  --window-size="${WIDTH},${HEIGHT}" \
   --window-position=0,0 \
   "${WEBPAGE_URL}" &
 BROWSER_PID=$!
@@ -83,13 +79,11 @@ cleanup() {
 }
 trap cleanup SIGTERM SIGINT
 
-# Capture the full display but crop off the top infobar area
 ffmpeg \
   -probesize 10M -analyzeduration 10M \
   -thread_queue_size 512 \
-  -f x11grab -video_size "${WIDTH}x${DISPLAY_HEIGHT}" -framerate "${FRAMERATE}" -i ":${DISPLAY_NUM}" \
+  -f x11grab -video_size "${RESOLUTION}" -framerate "${FRAMERATE}" -i ":${DISPLAY_NUM}" \
   -f lavfi -i anullsrc=r=48000:cl=stereo \
-  -vf "crop=${WIDTH}:${HEIGHT}:0:${INFOBAR_HEIGHT}" \
   -c:v libx264 -preset veryfast -tune zerolatency \
   -b:v "${VIDEO_BITRATE}" -maxrate "${VIDEO_BITRATE}" -bufsize "$((${VIDEO_BITRATE%k} * 2))k" \
   -pix_fmt yuv420p -g "$((FRAMERATE * 2))" -keyint_min "$((FRAMERATE * 2))" -sc_threshold 0 \
