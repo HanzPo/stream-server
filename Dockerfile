@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -s /bin/bash streamer
+RUN useradd -m -s /bin/bash streamer && \
+    mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 
 WORKDIR /app
 COPY stream.sh .

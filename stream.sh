@@ -47,6 +47,7 @@ PULSE_SOURCE="virtual_speaker.monitor"
 
 echo "Launching Chromium at ${WEBPAGE_URL}..."
 chromium \
+  --no-sandbox \
   --disable-gpu \
   --disable-dev-shm-usage \
   --disable-infobars \
@@ -55,6 +56,7 @@ chromium \
   --disable-background-networking \
   --disable-default-apps \
   --disable-translate \
+  --disable-features=GCMDriver \
   --js-flags="--max-old-space-size=512" \
   --autoplay-policy=no-user-gesture-required \
   --window-size="${WIDTH},${HEIGHT}" \
