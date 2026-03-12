@@ -25,11 +25,15 @@ HEIGHT="${RESOLUTION#*x}"
 DISPLAY_NUM=99
 
 echo "Starting virtual display ${RESOLUTION}..."
-Xvfb ":${DISPLAY_NUM}" -screen 0 "${RESOLUTION}x24" &
+Xvfb ":${DISPLAY_NUM}" -screen 0 "${RESOLUTION}x24" -nocursor &
 XVFB_PID=$!
 sleep 2
 
 export DISPLAY=":${DISPLAY_NUM}"
+
+echo "Starting window manager..."
+openbox &
+sleep 1
 
 echo "Starting PulseAudio..."
 pulseaudio -D --exit-idle-time=-1 2>/dev/null || true
@@ -44,6 +48,11 @@ chromium-browser \
   --disable-gpu \
   --disable-dev-shm-usage \
   --disable-software-rasterizer \
+  --disable-extensions \
+  --disable-background-networking \
+  --disable-default-apps \
+  --disable-translate \
+  --js-flags="--max-old-space-size=512" \
   --start-fullscreen \
   --kiosk \
   --autoplay-policy=no-user-gesture-required \
