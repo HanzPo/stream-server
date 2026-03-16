@@ -4,3 +4,9 @@ services:
     restart: unless-stopped
     env_file: .env
     shm_size: "2gb"
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/stream-healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
